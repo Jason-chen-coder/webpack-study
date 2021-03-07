@@ -20,7 +20,8 @@ const commCssLoader = [
     },
   }]
 module.exports = {
-  entry: './src/js/index.js',
+  // entry中添加index.html才能实现html热更新
+  entry: ['./src/js/index.js', './src/index.html'],
   output: {
     filename: 'js/built.js',
     path: resolve(__dirname, 'build'),
@@ -140,7 +141,9 @@ module.exports = {
     new OptimizeCssAssetsWebpackPlugin(),
   ],
   // 生产环境(production)下会压缩js文件
-  mode: 'production',
+  mode: 'development',
+  // 实现热更新
+  target: 'web',
   devServer: {
     // 项目构建后路径
     contentBase: resolve(__dirname, 'build'),
@@ -148,7 +151,10 @@ module.exports = {
     compress: true,
     // 端口号
     port: 3000,
+    progress: true,  // 是否显示加载进度条
     // 自动打开浏览器
     open: true,
+    // 开启热模块替换
+    hot: true,
   },
 };

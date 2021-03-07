@@ -8,18 +8,16 @@ body {
 }
 div,
 img {
-  height: 100px;
-  width: 100px;
+  height: 300px;
+  width: 300px;
   background-size: 100% 100%;
 }
 #box1 {
-  display: flex;
-  backface-visibility: hidden;
-  background-image: url("../image/angular.jpg");
+  background-image: url('../image/angular.jpg');
 }
 #box2 {
-  background-image: url("../image/react.png");
+  background-image: url('../image/react.png');
 }
 #box3 {
-  background-image: url("../image/vue.jpg");
+  background-image: url('../image/vue.jpg');
 }
