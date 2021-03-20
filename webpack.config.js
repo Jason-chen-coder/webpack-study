@@ -2,10 +2,15 @@ const { resolve } = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 // 用于css生产单独文件
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+// 引入serviceworker 插件
+// const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
+// dll相关
+const webpack = require('webpack')
+const AddAssetHtmlWebpackPlugin = require('add-asset-html-webpack-plugin');
 // 压缩css
 const OptimizeCssAssetsWebpackPlugin = require('optimize-css-assets-webpack-plugin');
 // 设置nodejs环境变量，默認是生产环境
-process.env.NODE_ENV = 'development';
+process.env.NODE_ENV = 'production ';
 // 复用css的loader配置
 const commCssLoader = [
   MiniCssExtractPlugin.loader,
@@ -23,7 +28,8 @@ module.exports = {
   // entry中添加index.html才能实现html热更新
   entry: ['./src/js/index.js', './src/index.html'],
   output: {
-    filename: 'js/built.js',
+    // 文件名加hash值可防止缓存
+    filename: 'js/built.[contenthash:10].js',
     path: resolve(__dirname, 'build'),
     publicPath: '/build/',
   },
@@ -102,29 +108,47 @@ module.exports = {
           {
             test: /\.js$/,
             exclude: /node_module/,
-            loader: 'babel-loader',
-            options: {
-              presets: [
-                [
-                  // 基本预设
-                  '@babel/preset-env',
-                  {
-                    // 按需加载
-                    useBuiltIns: 'usage',
-                    // 指定core-js版本
-                    corejs: { version: 3 },
-                    // 指定兼容到什么版本的浏览器
-                    targets: {
-                      chrome: '60',
-                      firefox: '50',
-                      ie: '9',
-                      safari: '10',
-                      edge: '17',
-                    },
-                  },
-                ],
-              ],
-            },
+            use: [
+              /* 
+                 thread-loader会对其后面的loader（这里是babel-loader）开启多进程打包。 
+                 进程启动大概为600ms，进程通信也有开销。(启动的开销比较昂贵，不要滥用)
+                 只有工作消耗时间比较长，才需要多进程打包
+               */
+              // {
+              //   loader: 'thread-loader',
+              //   options: {
+              //     workers: 2 // 进程2个
+              //   }
+              // },
+              {
+                loader: 'babel-loader',
+                options: {
+                  presets: [
+                    [
+                      // 基本预设
+                      '@babel/preset-env',
+                      {
+                        // 按需加载
+                        useBuiltIns: 'usage',
+                        // 指定core-js版本
+                        corejs: { version: 3 },
+                        // 指定兼容到什么版本的浏览器
+                        targets: {
+                          chrome: '60',
+                          firefox: '50',
+                          ie: '9',
+                          safari: '10',
+                          edge: '17',
+                        },
+                      },
+                    ],
+                  ],
+                  // 开启babel缓存
+                  // 第二次构建时，会读取之前的缓存
+                  cacheDirectory: true,
+                },
+              }
+            ]
           },
         ]
       }
@@ -140,9 +164,30 @@ module.exports = {
         removeComments: true
       }
     }),
-    new MiniCssExtractPlugin({ filename: 'css/built.css' }),
+    new MiniCssExtractPlugin({ filename: 'css/built.[contenthash:10].css' }),
     // 压缩css
     new OptimizeCssAssetsWebpackPlugin(),
+    // plugins中加入：
+    // new WorkboxWebpackPlugin.GenerateSW({
+    //   /*
+    //     1. 帮助serviceworker快速启动
+    //     2. 删除旧的 serviceworker
+
+    //     生成一个 serviceworker 配置文件
+    //   */
+    //   clientsClaim: true,
+    //   skipWaiting: true
+    // }),
+    // dll技术:
+    // 告诉webpack哪些库不参与打包，同时使用时的名称也得变
+    // 1.需先執行webpack --config webpack.dll.js生成manifest.json文件
+    new webpack.DllReferencePlugin({
+      manifest: resolve(__dirname, 'dll/manifest.json')
+    }),
+    // 2.将某个文件打包输出到build目录下，并在html中自动引入该资源
+    new AddAssetHtmlWebpackPlugin({
+      filepath: resolve(__dirname, 'dll/jquery.js')
+    }),
   ],
   devtool: 'eval-source-map',
   // 生产环境(production)下会压缩js文件
@@ -162,4 +207,16 @@ module.exports = {
     // 开启热模块替换
     hot: true,
   },
+  // 将 node_modules 中的代码单独打包
+  optimization: {
+    splitChunks: {
+      chunks: 'all'
+    }
+  },
+  externals: {
+    // 拒绝jQuery被打包进来(通过cdn引入，速度会快一些)
+    // 忽略的库名 -- npm包名 
+    // 忽略的库名 需要在 index.html 中通过 cdn 引入：
+    jquery: 'jQuery'
+  }
 };

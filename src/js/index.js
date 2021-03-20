@@ -25,3 +25,28 @@ if (module.hot) {
     print();
   });
 }
+
+// js懒加载+预加载
+document.getElementById('btn').onclick = function () {
+  // 将import的内容放在异步回调函数中使用，点击按钮，test.js才会被加载(不会重复加载)
+  // webpackPrefetch: true表示开启预加载
+  import(/* webpackChunkName: 'test', webpackPrefetch: true */'./test').then(({ mul }) => {
+    console.log(mul(4, 5));
+  });
+  import('./test').then(({ mul }) => {
+    console.log(mul(2, 5))
+  })
+};
+
+// if ('serviceWorker' in navigator) { // 处理兼容性问题
+//   window.addEventListener('load', () => {
+//     navigator.serviceWorker
+//       .register('/service-worker.js') // 注册serviceWorker
+//       .then(() => {
+//         console.log('sw注册成功了~');
+//       })
+//       .catch(() => {
+//         console.log('sw注册失败了~');
+//       });
+//   });
+// }
